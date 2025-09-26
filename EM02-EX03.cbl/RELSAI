@@ -1,0 +1,24 @@
+                                                                                
+                                                                   PAG.   1     
+                     LISTAGEM DE CLIENTES  DO SEXO FEMININO                     
+                      COM SALARIOS SUPERIORES  A 5.000,00                       
+
+
+    CODIGO              NOME                                        SALARIO     
+                                                                                
+    0000002             MARIA OLIVEIRA                              5.230,00    
+    0000004             ANA PAULA MOURA                             5.720,00    
+    0000006             FERNANDA LIMA                               5.980,00    
+    0000010             JULIANA TEIXEIRA                            5.350,00    
+    0000012             CAMILA FERNANDES                            5.820,00    
+    0000014             CRISTINA ROCHA                              5.170,00    
+    0000020             NATALIA FREITAS                             5.630,00    
+    0000024             ANDREA SANTOS                               5.020,00    
+    0000026             RAFAELA GOMES                               5.390,00    
+    0000028             MONICA BARROS                               5.750,00    
+    0000030             CAROLINA RIBEIRO                            5.580,00    
+
+
+
+    TOTAL DE CLIENTES IMPRESSOS:       011                                      
+    TOTAL DE SALARIO:            60.640,00                                      
