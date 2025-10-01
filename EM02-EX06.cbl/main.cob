@@ -31,7 +31,7 @@
            VALUE OF FILE-ID IS  "CADCLI.DAT".
            
        01 REGCLI.
-           02 CODIGO-CLI      PIC 9(03).
+           02 CODIGO-CLI      PIC x(03).
            02 CPF-CLI         PIC X(11).
            02 CPF-R REDEFINES 
               CPF-CLI         PIC 9(11).
@@ -61,11 +61,9 @@
        01 REG-REL PIC X(80).
        
        WORKING-STORAGE SECTION.
-       
-       77 MSG-ERROS     PIC X(57) VALUE SPACES.
-       77 P-ERRO        PIC 9(02) VALUE 1. 
-       
+
        77 FIM-ARQ       PIC X(03) VALUE "NAO".
+       77 PRIMEIRO-ERRO PIC X(03) VALUE "SIM".
        
        77 I             PIC 9(02).
        77 PESO          PIC 9(02).
@@ -84,7 +82,7 @@
        
        01 DETALHE.
            02 FILLER        PIC X(10) VALUE SPACES.
-           02 CODIGO-REL    PIC 9(03).
+           02 CODIGO-REL    PIC x(03).
            02 FILLER        PIC X(10) VALUE SPACES.
            02 MENSAGEM-ERRO PIC X(57).
        
@@ -108,9 +106,6 @@
            READ CADCLI AT END MOVE "SIM" TO FIM-ARQ.
            
        PRINCIPAL.
-           MOVE SPACES TO MSG-ERROS
-           MOVE 1 TO P-ERRO
-           PERFORM VERIFICA-CPF
            PERFORM VERIFICA-CAMPOS
            IF  CPF-VALIDO    = "SIM"  AND
                NOME-VALIDO   = "SIM"  AND
@@ -119,8 +114,6 @@
                EMAIL-VALIDO  = "SIM"   
                THEN
                PERFORM GRAVACAO
-           ELSE 
-               PERFORM IMPRESSAO
            END-IF
            PERFORM LEITURA. 
            
@@ -128,43 +121,74 @@
            MOVE CPF-CLI TO CPF-OK
            WRITE REGOK.
            
-       IMPRESSAO.
-           PERFORM IMPDET.
-           
-       IMPDET.
-           MOVE CODIGO-CLI TO CODIGO-REL
-           MOVE MSG-ERROS  TO MENSAGEM-ERRO
-           WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE.
-
        FIM.
            CLOSE CADCLI CADOK RELOCOR.
        
        VERIFICA-CAMPOS.
-      *VERIFICAÇÃO DO NOME 
+           MOVE "SIM" TO PRIMEIRO-ERRO
+           PERFORM VERIFICA-NOME
+           PERFORM VERIFICA-ESTADO
+           PERFORM VERIFICA-CIDADE
+           PERFORM VERIFICA-EMAIL
+           PERFORM VERIFICA-CPF.
+
+       VERIFICA-NOME.
            IF NOME-CLI = SPACES THEN 
                MOVE "NÃO" TO NOME-VALIDO
-                STRING "NOME INVÁLIDO; " DELIMITED BY SIZE
-                    INTO MSG-ERROS WITH POINTER P-ERRO
+               IF PRIMEIRO-ERRO = "SIM"
+                   MOVE CODIGO-CLI TO CODIGO-REL
+                   MOVE "NAO" TO PRIMEIRO-ERRO
+               ELSE
+                   MOVE SPACES TO CODIGO-REL
+               END-IF
+               MOVE "NOME NAO INFORMADO" TO MENSAGEM-ERRO
+               WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
            ELSE 
                MOVE "SIM" TO NOME-VALIDO
-           END-IF
-      *VERIFICAÇÃO DA CIDADE      
+           END-IF.
+       
+       VERIFICA-ESTADO.
+           IF NOT ESTADO-VALIDO
+               IF PRIMEIRO-ERRO = "SIM"
+                   MOVE CODIGO-CLI TO CODIGO-REL
+                   MOVE "NAO" TO PRIMEIRO-ERRO
+               ELSE
+                   MOVE SPACES TO CODIGO-REL
+               END-IF
+               MOVE "ESTADO INVALIDO" TO MENSAGEM-ERRO
+               WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
+           END-IF.
+
+       VERIFICA-CIDADE.
            IF CIDADE-CLI = SPACES
                MOVE "NAO" TO CIDADE-VALIDO
-               STRING "CIDADE INVÁLIDA; " DELIMITED BY SIZE
-                    INTO MSG-ERROS WITH POINTER P-ERRO
+               IF PRIMEIRO-ERRO = "SIM"
+                   MOVE CODIGO-CLI TO CODIGO-REL
+                   MOVE "NAO" TO PRIMEIRO-ERRO
+               ELSE
+                   MOVE SPACES TO CODIGO-REL
+               END-IF
+               MOVE "CIDADE NAO INFORMADA" TO MENSAGEM-ERRO
+               WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
            ELSE
                MOVE "SIM" TO CIDADE-VALIDO
-           END-IF
-
+           END-IF.
+       
+       VERIFICA-EMAIL.
            IF EMAIL-CLI = SPACES
                MOVE "NAO" TO EMAIL-VALIDO
-               STRING "EMAIL NÃO INFORMADO; " DELIMITED BY SIZE
-                    INTO MSG-ERROS WITH POINTER P-ERRO
+               IF PRIMEIRO-ERRO = "SIM"
+                   MOVE CODIGO-CLI TO CODIGO-REL
+                   MOVE "NAO" TO PRIMEIRO-ERRO
+               ELSE
+                   MOVE SPACES TO CODIGO-REL
+               END-IF
+               MOVE "EMAIL NAO INFORMADO" TO MENSAGEM-ERRO
+               WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
            ELSE
                MOVE "SIM" TO EMAIL-VALIDO
            END-IF.
-        
+
        VERIFICA-CPF.
            IF  CPF-CLI IS NUMERIC
                PERFORM CALCULA-CPF
@@ -173,13 +197,29 @@
                    MOVE "SIM" TO CPF-VALIDO
                ELSE 
                    MOVE "NAO" TO CPF-VALIDO
-                   STRING "CPF INVALIDO; " DELIMITED BY SIZE
-                       INTO MSG-ERROS WITH POINTER P-ERRO
-               END-IF
+                   IF PRIMEIRO-ERRO = "SIM" 
+                       MOVE CODIGO-CLI TO CODIGO-REL
+                       MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+                       WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
+                       MOVE "NAO" TO PRIMEIRO-ERRO
+                   ELSE
+                       MOVE SPACES TO CODIGO-REL
+                       MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+                       WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
+                   END-IF
+               END-IF    
            ELSE 
                MOVE "NAO" TO CPF-VALIDO
-               STRING "CPF INVALIDO; " DELIMITED BY SIZE
-                       INTO MSG-ERROS WITH POINTER P-ERRO
+               IF PRIMEIRO-ERRO = "SIM"
+                   MOVE CODIGO-CLI TO CODIGO-REL
+                   MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+                   WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
+                   MOVE "NAO" TO PRIMEIRO-ERRO
+               ELSE
+                   MOVE SPACES TO CODIGO-REL    
+                   MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+                   WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
+               END-IF
            END-IF.
            
        CALCULA-CPF.
