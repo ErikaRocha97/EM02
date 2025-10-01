@@ -62,7 +62,10 @@
        
        WORKING-STORAGE SECTION.
        
-       77 FIM-ARQ     PIC X(03) VALUE "NAO".
+       77 MSG-ERROS     PIC X(57) VALUE SPACES.
+       77 P-ERRO        PIC 9(02) VALUE 1. 
+       
+       77 FIM-ARQ       PIC X(03) VALUE "NAO".
        
        77 I             PIC 9(02).
        77 PESO          PIC 9(02).
@@ -76,14 +79,14 @@
        77 CPF-VALIDO    PIC X(03).
        77 NOME-VALIDO   PIC X(03).
        77 CIDADE-VALIDO PIC X(03).
-       77 EMAIL-VALID   PIC X(03).
+       77 EMAIL-VALIDO  PIC X(03).
        77 TEL-VALIDO    PIC X(03).
        
        01 DETALHE.
            02 FILLER        PIC X(10) VALUE SPACES.
            02 CODIGO-REL    PIC 9(03).
            02 FILLER        PIC X(10) VALUE SPACES.
-           02 MENSAGEM-ERRO PIC X(30).
+           02 MENSAGEM-ERRO PIC X(57).
        
        01 CPF-DIGITOS   PIC 9 OCCURS 11 TIMES.
 
@@ -105,9 +108,16 @@
            READ CADCLI AT END MOVE "SIM" TO FIM-ARQ.
            
        PRINCIPAL.
+           MOVE SPACES TO MSG-ERROS
+           MOVE 1 TO P-ERRO
            PERFORM VERIFICA-CPF
-           IF  CPF-VALIDO  = "SIM"  AND
-               ESTADO-VALIDO THEN
+           PERFORM VERIFICA-CAMPOS
+           IF  CPF-VALIDO    = "SIM"  AND
+               NOME-VALIDO   = "SIM"  AND
+               ESTADO-VALIDO          AND
+               CIDADE-VALIDO = "SIM"  AND 
+               EMAIL-VALIDO  = "SIM"   
+               THEN
                PERFORM GRAVACAO
            ELSE 
                PERFORM IMPRESSAO
@@ -123,32 +133,53 @@
            
        IMPDET.
            MOVE CODIGO-CLI TO CODIGO-REL
+           MOVE MSG-ERROS  TO MENSAGEM-ERRO
            WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE.
 
        FIM.
            CLOSE CADCLI CADOK RELOCOR.
        
        VERIFICA-CAMPOS.
+      *VERIFICAÇÃO DO NOME 
            IF NOME-CLI = SPACES THEN 
                MOVE "NÃO" TO NOME-VALIDO
-               MOVE "NOME NÃO INFORMADO" TO MENSAGEM-ERRO
+                STRING "NOME INVÁLIDO; " DELIMITED BY SIZE
+                    INTO MSG-ERROS WITH POINTER P-ERRO
            ELSE 
                MOVE "SIM" TO NOME-VALIDO
+           END-IF
+      *VERIFICAÇÃO DA CIDADE      
+           IF CIDADE-CLI = SPACES
+               MOVE "NAO" TO CIDADE-VALIDO
+               STRING "CIDADE INVÁLIDA; " DELIMITED BY SIZE
+                    INTO MSG-ERROS WITH POINTER P-ERRO
+           ELSE
+               MOVE "SIM" TO CIDADE-VALIDO
+           END-IF
+
+           IF EMAIL-CLI = SPACES
+               MOVE "NAO" TO EMAIL-VALIDO
+               STRING "EMAIL NÃO INFORMADO; " DELIMITED BY SIZE
+                    INTO MSG-ERROS WITH POINTER P-ERRO
+           ELSE
+               MOVE "SIM" TO EMAIL-VALIDO
            END-IF.
         
        VERIFICA-CPF.
            IF  CPF-CLI IS NUMERIC
                PERFORM CALCULA-CPF
-               IF CPF-DIGITOS(10) = DIGITO1 AND 
-                  CPF-DIGITOS(11) = DIGITO2 THEN
-                    MOVE "SIM" TO CPF-VALIDO
+               IF  CPF-DIGITOS(10) = DIGITO1 AND 
+                   CPF-DIGITOS(11) = DIGITO2 THEN
+                   MOVE "SIM" TO CPF-VALIDO
                ELSE 
-                    MOVE "NAO" TO CPF-VALIDO
-                    MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+                   MOVE "NAO" TO CPF-VALIDO
+                   STRING "CPF INVALIDO; " DELIMITED BY SIZE
+                       INTO MSG-ERROS WITH POINTER P-ERRO
                END-IF
            ELSE 
                MOVE "NAO" TO CPF-VALIDO
-               MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+               STRING "CPF INVALIDO; " DELIMITED BY SIZE
+                       INTO MSG-ERROS WITH POINTER P-ERRO
            END-IF.
            
        CALCULA-CPF.
