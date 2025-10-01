@@ -31,15 +31,29 @@
            VALUE OF FILE-ID IS  "CADCLI.DAT".
            
        01 REGCLI.
-           02 CODIGO-CLI PIC 9(03).
-           02 CPF-CLI    PIC 9(11).
+           02 CODIGO-CLI      PIC 9(03).
+           02 CPF-CLI         PIC X(11).
+           02 CPF-R REDEFINES 
+              CPF-CLI         PIC 9(11).
+           02 NOME-CLI        PIC X(30).
+           02 ESTADO-CLI      PIC X(02).
+               88 ESTADO-VALIDO       
+                              VALUE "AC" "AL" "AP" "AM" "BA"
+                                    "CE" "DF" "ES" "GO" "MT"
+                                    "MA" "MS" "MG" "PA" "PB"
+                                    "PR" "PE" "PI" "RJ" "RN"
+                                    "RS" "RO" "RR" "SC" "SP"
+                                    "SE" "TO".
+           02 CIDADE-CLI      PIC X(30).
+           02 EMAIL-CLI       PIC X(30).
+           02 TEL-CLI         PIC 9(10).
            
        FD CADOK
            LABEL RECORD ARE STANDARD
            VALUE OF FILE-ID IS  "CADOK.DAT".
 
        01 REGOK.
-           02 CPF-OK  PIC 9(11).     
+           02 CPF-OK    PIC 9(11).     
            
        FD RELOCOR
            LABEL RECORD IS OMITTED.
@@ -50,15 +64,20 @@
        
        77 FIM-ARQ     PIC X(03) VALUE "NAO".
        
-       77 I           PIC 9(02).
-       77 PESO        PIC 9(02).
-       77 SOMA        PIC 9(10).
-       77 AUX         PIC 9(10).
-       77 DIGITO1     PIC 9(01).
-       77 DIGITO2     PIC 9(01).
-       77 QUOCIENT    PIC 9(10).
-       77 RESTO       PIC 9(10).
-       77 CPF-VALIDO  PIC X(03).
+       77 I             PIC 9(02).
+       77 PESO          PIC 9(02).
+       77 SOMA          PIC 9(10).
+       77 AUX           PIC 9(10).
+       77 DIGITO1       PIC 9(01).
+       77 DIGITO2       PIC 9(01).
+       77 QUOCIENT      PIC 9(10).
+       77 RESTO         PIC 9(10).
+       
+       77 CPF-VALIDO    PIC X(03).
+       77 NOME-VALIDO   PIC X(03).
+       77 CIDADE-VALIDO PIC X(03).
+       77 EMAIL-VALID   PIC X(03).
+       77 TEL-VALIDO    PIC X(03).
        
        01 DETALHE.
            02 FILLER        PIC X(10) VALUE SPACES.
@@ -87,8 +106,8 @@
            
        PRINCIPAL.
            PERFORM VERIFICA-CPF
-               IF CPF-VALIDO = "SIM"
-               THEN 
+           IF  CPF-VALIDO  = "SIM"  AND
+               ESTADO-VALIDO THEN
                PERFORM GRAVACAO
            ELSE 
                PERFORM IMPRESSAO
@@ -104,19 +123,32 @@
            
        IMPDET.
            MOVE CODIGO-CLI TO CODIGO-REL
-           MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
            WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE.
 
        FIM.
            CLOSE CADCLI CADOK RELOCOR.
        
+       VERIFICA-CAMPOS.
+           IF NOME-CLI = SPACES THEN 
+               MOVE "NÃO" TO NOME-VALIDO
+               MOVE "NOME NÃO INFORMADO" TO MENSAGEM-ERRO
+           ELSE 
+               MOVE "SIM" TO NOME-VALIDO
+           END-IF.
+        
        VERIFICA-CPF.
-           PERFORM CALCULA-CPF
-           IF CPF-DIGITOS(10) = DIGITO1 
-               AND CPF-DIGITOS(11) = DIGITO2 THEN
-               MOVE "SIM" TO CPF-VALIDO
+           IF  CPF-CLI IS NUMERIC
+               PERFORM CALCULA-CPF
+               IF CPF-DIGITOS(10) = DIGITO1 AND 
+                  CPF-DIGITOS(11) = DIGITO2 THEN
+                    MOVE "SIM" TO CPF-VALIDO
+               ELSE 
+                    MOVE "NAO" TO CPF-VALIDO
+                    MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+               END-IF
            ELSE 
                MOVE "NAO" TO CPF-VALIDO
+               MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
            END-IF.
            
        CALCULA-CPF.
