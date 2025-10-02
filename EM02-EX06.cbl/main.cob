@@ -64,6 +64,7 @@
 
        77 FIM-ARQ       PIC X(03) VALUE "NAO".
        77 PRIMEIRO-ERRO PIC X(03) VALUE "SIM".
+       77 CT-LIN        PIC 9(02) VALUE 40. 
        
        77 I             PIC 9(02).
        77 PESO          PIC 9(02).
@@ -107,8 +108,7 @@
            02 FILLER  PIC X(10) VALUE SPACES.
            02 FILLER  PIC X(15) VALUE "DADOS INVALIDOS". 
            02 FILLER  PIC X(30) VALUE SPACES.
-
-      *Cabeçalho da tabela do relatório     
+   
        01 SEPARADOR.
            02 FILLER  PIC X(80) VALUE ALL "-".
 
@@ -124,7 +124,6 @@
            OPEN INPUT CADCLI
                 OUTPUT CADOK
                 OUTPUT RELOCOR
-           PERFORM CABECALHO
            PERFORM LEITURA.
        
        LEITURA.
@@ -136,22 +135,13 @@
                NOME-VALIDO   = "SIM"  AND
                ESTADO-VALIDO          AND
                CIDADE-VALIDO = "SIM"  AND 
-               EMAIL-VALIDO  = "SIM"   
-               THEN
+               EMAIL-VALIDO  = "SIM"  THEN
                PERFORM GRAVACAO
+           ELSE
+               PERFORM IMPRIME-RELATORIO
            END-IF
            PERFORM LEITURA. 
-           
-       GRAVACAO.
-           MOVE CPF-CLI TO CPF-OK
-           WRITE REGOK.
-
-       CABECALHO.
-           WRITE REG-REL FROM CAB-01    AFTER ADVANCING 1 LINE.
-           WRITE REG-REL FROM CAB-02    AFTER ADVANCING 3 LINES.
-           WRITE REG-REL FROM CAB-03    AFTER ADVANCING 3 LINES.
-           WRITE REG-REL FROM SEPARADOR AFTER ADVANCING 1 LINES.
-              
+       
        FIM.
            CLOSE CADCLI CADOK RELOCOR.
        
@@ -159,55 +149,80 @@
            MOVE "SIM" TO PRIMEIRO-ERRO
            PERFORM VERIFICA-CPF
            PERFORM VERIFICA-NOME
-           PERFORM VERIFICA-ESTADO
            PERFORM VERIFICA-CIDADE
            PERFORM VERIFICA-EMAIL.
+
+       GRAVACAO.
+           MOVE CPF-CLI TO CPF-OK
+           WRITE REGOK.
+       
+       IMPRIME-RELATORIO.
+           IF  NOME-VALIDO = "NAO" THEN
+               MOVE "NOME NAO INFORMADO" TO MENSAGEM-ERRO
+               PERFORM IMPRIME-OCORRENCIA
+           END-IF
            
-       VERIFICA-OCORRENCIA.
-           IF PRIMEIRO-ERRO = "SIM"
-               PERFORM PRIMEIRA-OCORRENCIA
-           ELSE
-               PERFORM OUTRA-OCORRENCIA
+           IF  NOT ESTADO-VALIDO THEN
+               MOVE "ESTADO INVALIDO" TO MENSAGEM-ERRO
+               PERFORM IMPRIME-OCORRENCIA
+           END-IF
+           
+           IF  CIDADE-VALIDO = "NAO" THEN
+               MOVE "CIDADE NAO INFORMADA" TO MENSAGEM-ERRO
+               PERFORM IMPRIME-OCORRENCIA
+           END-IF
+           IF EMAIL-VALIDO = "NAO" THEN
+               MOVE "EMAIL NAO INFORMADO" TO MENSAGEM-ERRO
+               PERFORM IMPRIME-OCORRENCIA
+           END-IF
+           IF CPF-VALIDO = "NAO" THEN
+               MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
+               PERFORM IMPRIME-OCORRENCIA
            END-IF.
        
-       PRIMEIRA-OCORRENCIA.
-           MOVE CODIGO-CLI TO CODIGO-REL
-           MOVE "NAO" TO PRIMEIRO-ERRO
-           WRITE REG-REL FROM DETALHE AFTER ADVANCING 2 LINE.
-           
-       OUTRA-OCORRENCIA.
-           MOVE SPACES TO CODIGO-REL
-           WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE.
+       IMPRIME-OCORRENCIA.
+           ADD 1 TO CT-LIN
+           PERFORM VERIFICA-LINHAS 
+               
+           IF PRIMEIRO-ERRO = "SIM"
+               MOVE CODIGO-CLI TO CODIGO-REL
+               MOVE "NAO" TO PRIMEIRO-ERRO
+               WRITE REG-REL FROM DETALHE AFTER ADVANCING 2 LINE
+           ELSE
+               MOVE SPACES TO CODIGO-REL
+               WRITE REG-REL FROM DETALHE AFTER ADVANCING 1 LINE
+           END-IF.
+       
+       VERIFICA-LINHAS.
+           IF  CT-LIN GREATER THAN 39
+               PERFORM CABECALHO
+               MOVE 0 TO CT-LIN
+               MOVE "SIM" TO PRIMEIRO-ERRO
+           END-IF.
+       
+       CABECALHO.
+           WRITE REG-REL FROM CAB-01    AFTER ADVANCING 1 LINE.
+           WRITE REG-REL FROM CAB-02    AFTER ADVANCING 3 LINES.
+           WRITE REG-REL FROM CAB-03    AFTER ADVANCING 3 LINES.
+           WRITE REG-REL FROM SEPARADOR AFTER ADVANCING 1 LINES.
        
        VERIFICA-NOME.
-           IF NOME-CLI = SPACES THEN 
-               MOVE "NÃO" TO NOME-VALIDO
-               MOVE "NOME NAO INFORMADO" TO MENSAGEM-ERRO
-               PERFORM VERIFICA-OCORRENCIA
+           IF  NOME-CLI = SPACES THEN 
+               MOVE "NAO" TO NOME-VALIDO
            ELSE 
                MOVE "SIM" TO NOME-VALIDO
            END-IF.
-       
-       VERIFICA-ESTADO.
-           IF NOT ESTADO-VALIDO
-               MOVE "ESTADO INVALIDO" TO MENSAGEM-ERRO
-               PERFORM VERIFICA-OCORRENCIA
-           END-IF.
 
        VERIFICA-CIDADE.
-           IF CIDADE-CLI = SPACES
+           IF  CIDADE-CLI = SPACES
                MOVE "NAO" TO CIDADE-VALIDO
-               MOVE "CIDADE NAO INFORMADA" TO MENSAGEM-ERRO
-               PERFORM VERIFICA-OCORRENCIA
            ELSE
                MOVE "SIM" TO CIDADE-VALIDO
            END-IF.
        
        VERIFICA-EMAIL.
-           IF EMAIL-CLI = SPACES
+           IF  EMAIL-CLI = SPACES
                MOVE "NAO" TO EMAIL-VALIDO
-               MOVE "EMAIL NAO INFORMADO" TO MENSAGEM-ERRO
-               PERFORM VERIFICA-OCORRENCIA
            ELSE
                MOVE "SIM" TO EMAIL-VALIDO
            END-IF.
@@ -220,13 +235,10 @@
                    MOVE "SIM" TO CPF-VALIDO
                ELSE 
                    MOVE "NAO" TO CPF-VALIDO
-                   MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
-                   PERFORM VERIFICA-OCORRENCIA
+                   
                END-IF    
            ELSE 
                MOVE "NAO" TO CPF-VALIDO
-               MOVE "CPF INVALIDO" TO MENSAGEM-ERRO
-               PERFORM VERIFICA-OCORRENCIA
            END-IF.
            
        CALCULA-CPF.
